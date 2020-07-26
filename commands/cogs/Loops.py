@@ -17,8 +17,9 @@ class Loops(commands.Cog):
         with open("config.json") as file:
             config_json = json.load(file)
             loops_enabled = config_json['loops_enabled']
-        self.initialT100Cutoffs = requests.get('https://bestdori.com/api/tracker/data?server=1&event=80&tier=0').json()
-        self.initialT1000Cutoffs = requests.get('https://bestdori.com/api/tracker/data?server=1&event=80&tier=1').json()
+        self.initialT100Cutoffs = requests.get('https://bestdori.com/api/tracker/data?server=1&event=84&tier=0').json()
+        self.initialT1000Cutoffs = requests.get('https://bestdori.com/api/tracker/data?server=1&event=84&tier=1').json()
+        self.initialCardsAPI = requests.get('https://bestdori.com/api/cards/all.5.json').json()
         self.firstAPI = requests.get('https://bestdori.com/api/news/all.5.json').json()
 
         if loops_enabled == 'true':
@@ -31,6 +32,8 @@ class Loops(commands.Cog):
             self.bot.loop.create_task(self.postT100CutoffUpdates())
             self.bot.loop.create_task(self.postBestdoriNews())
             self.bot.loop.create_task(self.UpdateAvatar())
+            self.bot.loop.create_task(self.UpdateCardIcons())
+            
             # self.bot.loop.create_task(self.PostYukiLisa())
         else:
             print('Not loading loops')
@@ -41,10 +44,10 @@ class Loops(commands.Cog):
         while not self.bot.is_closed():
             from os import listdir
             import os, random
-            path = "pfps/"
+            path = "img/pfps/"
             files = []
             for file in os.listdir(path):
-                files.append('pfps/' + file)
+                files.append('img/pfps/' + file)
             pic = random.choice(files)
             try:
                 with open(pic, 'rb') as f:
@@ -63,8 +66,21 @@ class Loops(commands.Cog):
         self.bot.loop.create_task(self.postEventNotif('jp'))
         self.bot.loop.create_task(self.postBestdoriNews())
         self.bot.loop.create_task(self.UpdateAvatar())
+        self.bot.loop.create_task(self.UpdateCardIcons())
         # self.bot.loop.create_task(self.PostYukiLisa())
 
+    async def UpdateCardIcons(self):
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed():
+            from commands.apiFunctions import GetBestdoriAllCardsAPI
+            initialCardsAPI = self.initialCardsAPI
+            CardsAPI = await GetBestdoriAllCardsAPI()
+            if(sorted(initialCardsAPI.items()) != sorted(CardsAPI.items())):
+                from commands.cogs.Fun import UpdateCardIcons
+                await UpdateCardIcons
+                self.initialCardsAPI = CardsAPI
+            await asyncio.sleep(300)
+            
     # This was for NR1 server, but I'll leave it for now incase I feel like reusing it
     async def PostYukiLisa(self):
         await self.bot.wait_until_ready()
@@ -82,10 +98,10 @@ class Loops(commands.Cog):
             PicURL = pic['image_urls']['large']
             if charaId == '23':
                 SaveImage = True
-                SavedPicPath = f'pfps/{PicID}_p0.jpg'
+                SavedPicPath = f'img/pfps/{PicID}_p0.jpg'
             else:
                 SaveImage = False
-                SavedPicPath = f'imgTmp/{PicID}_p0.jpg'
+                SavedPicPath = f'img/imgTmp/{PicID}_p0.jpg'
             response = requests.get(PicURL, 
                                     headers={
                                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36', 

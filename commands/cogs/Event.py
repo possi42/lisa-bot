@@ -16,6 +16,7 @@ import discord
 import json
 import selenium
 import math
+import re
 
 class Event(commands.Cog):
     def __init__(self, bot):
@@ -31,7 +32,7 @@ class Event(commands.Cog):
             self.ValidT10EventsJP = asyncio.run(self.GetT10Events('jp'))
         else:
             print("Not loading Valid T10 Events")
-    
+
     async def GetT10Events(self, server):
         # After running this command for a few weeks, only the current and previous 5 events are returned so may as well hard code it
         from commands.formatting.EventCommands import GetCurrentEventID
@@ -68,8 +69,7 @@ class Event(commands.Cog):
         try:
             if server not in self.ValidT10Servers:
                 await ctx.send('This function only works for the `EN` and `JP` servers')
-            ValidJPIDUsers = [158699060893581313,
-                                365863959527555082, 384333652344963074, 385264382935957504]
+            ValidJPIDUsers = [359549867955191811,158699060893581313, 365863959527555082, 384333652344963074, 385264382935957504, 301704971962023937]
             if server == 'jp' and ctx.message.author.id not in ValidJPIDUsers:
                 output = 'This command has been temporarily disabled / このコマンドは現在無効になっています'
             else:
@@ -85,7 +85,7 @@ class Event(commands.Cog):
             await ctx.send("No file found for the specified event.")
 
     @commands.command(name='t10',
-                brief="t10 info",                    
+                brief="t10 info",
                 description="Posts t10 info. You can also include the songs parameter at the end to look at song info (given the event is CL or VS)",
                 help=".t10 en 30\n.t10 jp 78 songs\n.t10 (defaults to en and the current event id, no songs")
     async def t10(self, ctx, server: str = 'en', eventid: int = 0, *songs):
@@ -123,8 +123,8 @@ class Event(commands.Cog):
             if server not in self.ValidT10Servers:
                 output = 'This function only works for the `EN` and `JP` servers'
             else:
-                ValidJPIDUsers = [158699060893581313,
-                                  365863959527555082, 384333652344963074, 385264382935957504]
+                ValidJPIDUsers = [359549867955191811,158699060893581313,
+                                  365863959527555082, 384333652344963074, 385264382935957504, 301704971962023937]
                 if server == 'jp' and ctx.message.author.id not in ValidJPIDUsers:
                     output = 'This command has been temporarily disabled / このコマンドは現在無効になっています'
                 else:
@@ -203,7 +203,7 @@ class Event(commands.Cog):
     #######################
     #    Cutoff Commands   #
     #######################
-    
+
     #open website
 
     @commands.command(name='refresh',
@@ -222,7 +222,7 @@ class Event(commands.Cog):
                 driver = twkrDriver
             driver.find_element_by_xpath('//*[@id="app"]/div[4]/div[2]/div/div[3]/div[1]/div[2]/div/div[2]/a').click()
         except:
-            await ctx.send('Failed refreshing the event tracker page for %s.' %(server))        
+            await ctx.send('Failed refreshing the event tracker page for %s.' %(server))
 
     @commands.command(name='cutoffhistory',
                     aliases=['cutoffarchives','ch','ca'],
@@ -252,62 +252,87 @@ class Event(commands.Cog):
             except:
                 output = 'Failed adding cutoff'
         await ctx.send(output)
+
     @commands.command(name='cutoff',
-                      aliases=['t100', 't1000', 't2000','t2500','t5000','t10000'],
-                      description="Cutoff estimate for t100, t1000, and t2000. Input the tier and server (defaulted to en and 100) Add graph to the end to see a graph (doesn't work for t100/t1000/t2000)\n\nNote: t100 and t1000 aliases can only be used for en, and t2000 for jp",
-                      help=".cutoff 100\n.cutoff 1000 en\n.cutoff 2000 jp graph")
-    async def cutoff(self, ctx, tier: int = 100, server: str = 'en', graph: str = ''):
-        # await ctx.send("I would like to start tracking t10/5/2.5k for EN (likely after NR1). If you'd like to help with tracking this info (by providing or inputting) please let Josh#1373 know!")
-        # ValidTiers = [100, 1000, 2000]
-        # if tier not in ValidTiers:
-        #     await ctx.send(f"{tier} isn't supported")
-        # else:
-        server = server.lower()
-        ValidServer = ['jp', 'cn', 'en', 'tw', 'kr']
-        ValidT2000 = ['jp', 'cn']
-        ValidT1000 = ['en', 'jp', 'cn']
-        output = ''
+                      aliases=['t100', 't1000', 't2000','t2500','t5000','t10000','t1k','t2k','t2.5k','t5k','t10k','co'],
+                      description="Cutoff estimate for t100, t1000, and t2000 (experimental support for t2500, t5000, and t10000). Input the tier and server (defaulted to en and 100). Add graph as an argument to see a graph",
+                      help=".cutoff 100\n.cutoff 1000 en\n.cutoff 2000 jp graph\n.cutoff en t1000\n.t100\n.t100 jp graph")
+    async def cutoff(self, ctx, *args):
+        valid_servers = {'jp', 'cn', 'en', 'tw', 'kr'}
+        valid_servers_by_tier = {
+            100: ['en', 'jp', 'cn', 'tw', 'kr'],
+            500: ['tw'],
+            1000: ['en', 'jp', 'cn'],
+            2000: ['jp', 'cn'],
+            2500: ['en'],
+            5000: ['jp'],
+            10000: ['jp']
+        }
+
         ctx.invoked_with = ctx.invoked_with.lower()
-        if 't1000' in ctx.invoked_with:
-            tier = 1000
-        elif 't100' in ctx.invoked_with:
-            tier = 100
-        elif 't2000' in ctx.invoked_with:
-            tier = 2000
-        elif 't2500' in ctx.invoked_with:
-            tier = 2500
-        elif 't5000' in ctx.invoked_with:
-            tier = 5000
-        elif 't10000' in ctx.invoked_with:
-            tier = 10000
-            
-        if tier in [100,1000,2000]:
-            import random
-            value = random.random()
-            if value > .5:
-                await ctx.send('Lisa bot is now (experimentally) tracking t2.5k/5k/10k data for the EN server. If you have data you wish to add to the bot, please post in the Lisa bot discord or ping one of the following:\n\nJosh#1373\nNeon#5555\norangejuice#8467\nEndure#9581\nHaruu#6580\n学渣#1424')
-        elif tier in [2500, 5000, 10000]:
-            await ctx.send('This is an experimental feature, expect bugs. If you find any, please use the `.notify` command to let Josh know')
-        if server not in ValidServer:
-            output = 'You did not specify a valid server'
-        else:
-            if tier == 2000 and server not in ValidT2000:
-                output = 'T2000 is only valid for JP and CN'
-            if tier == 1000 and server not in ValidT1000:
-                output = 'T1000 is only valid for EN, JP, and CN'
-            if output:
-                await ctx.send(output)
+        tier_regex = re.compile(r't?([0-9]+k?|[0-9]+\.[0-9]+k)')
+
+        tier = None
+        server = None
+        graph = None
+
+        def parse_tier_arg(tier_arg):
+            if tier_arg[0] == 't':
+                tier_arg = tier_arg[1:]
+            if tier_arg[-1] == 'k':
+                return round(1000 * float(tier_arg[:-1]))
+            return int(tier_arg)
+
+        for arg in args:
+            arg = arg.lower()
+            if tier_regex.fullmatch(arg):
+                if tier is not None:
+                    await ctx.send('Only one tier argument is allowed.')
+                    return
+                tier = parse_tier_arg(arg)
+            elif arg in valid_servers:
+                if server is not None:
+                    await ctx.send('Only one server argument is allowed.')
+                    return
+                server = arg
+            elif arg == 'graph':
+                graph = True
             else:
-                try:
-                    if graph:
-                        output = await GetCutoffFormatting(server, tier, True)
-                        await ctx.send(file=output[1], embed=output[0])
-                    else:
-                        output = await GetCutoffFormatting(server, tier, False)
-                        await ctx.send(embed=output)
-                except IndexError:
-                    await ctx.send('Failed getting cutoff data')
-                        
+                await ctx.send(f'Unknown argument: "{arg}".')
+                return
+
+        # set tier if using an alias (.t100, .t1000, etc.)
+        if tier_regex.fullmatch(ctx.invoked_with):
+            if tier is not None:
+                await ctx.send('Tier already specified by alias.')
+                return
+            tier = parse_tier_arg(ctx.invoked_with)
+
+        tier = tier or 100
+        if tier not in valid_servers_by_tier:
+            await ctx.send(f'Invalid tier: {tier}.')
+            return
+
+        server = server or valid_servers_by_tier[tier][0]
+
+        if server not in valid_servers_by_tier[tier]:
+            tier_server_list = [server.upper() for server in valid_servers_by_tier[tier]]
+            if len(tier_server_list) < 3:
+                readable_list = ' and '.join(tier_server_list)
+            else:
+                readable_list = ', '.join(tier_server_list[:-1]) + ', and ' + tier_server_list[-1]
+            await ctx.send(f'T{tier} is only valid for {readable_list}.')
+            return
+        try:
+            if graph:
+                output = await GetCutoffFormatting(server, tier, True)
+                await ctx.send(file=output[1], embed=output[0])
+            else:
+                output = await GetCutoffFormatting(server, tier, False)
+                await ctx.send(embed=output)
+        except IndexError:
+            await ctx.send('Failed getting cutoff data')
+
     @coasting.error
     async def coasting_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
@@ -315,30 +340,30 @@ class Event(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.send("Invalid argument, please check argument positioning using `.help coasting`")
 
-    @timeLeftBotCommand.error 
+    @timeLeftBotCommand.error
     async def timeleft_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'server':
                 await ctx.send("Missing argument, please check required arguments using `.help <command>`! Required arguments are enclosed in < >")
-    @t10.error 
+    @t10.error
     async def t10_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'server':
                 await ctx.send("Missing argument, please check required arguments using `.help <command>`! Required arguments are enclosed in < >")
         if isinstance(error, commands.BadArgument):
             await ctx.send("Invalid argument, please check argument positioning using `.help t10`")
-    @t10ids.error 
+    @t10ids.error
     async def t10ids_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             await ctx.send("Invalid argument, please check argument positioning using `.help t10ids`")
-    @t10members.error 
+    @t10members.error
     async def t10members_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'server':
                 await ctx.send("Missing argument, please check required arguments using `.help <command>`! Required arguments are enclosed in < >")
         if isinstance(error, commands.BadArgument):
             await ctx.send("Invalid argument, please check argument positioning using `.help t10members`")
-    @t10archives.error 
+    @t10archives.error
     async def t10archives_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             await ctx.send("Invalid argument, please check argument positioning using `.help t10archives`")

@@ -31,7 +31,7 @@ class Fun(commands.Cog):
             if charalist[1]:
                 name = "".join(charalist[0].split())
                 AllCharacters.append(name)
-        #AllCharacters = AllCharacters[0:25] # Because the API has a lot more than the 25 main characters
+        AllCharacters = AllCharacters[0:25] # Because the API has a lot more than the 25 main characters
         for chara in AllCharacters:
             AllPics = {}
             
@@ -62,7 +62,6 @@ class Fun(commands.Cog):
             f = open(f"{chara}.json","a")
             f.write(newfile)
             f.close()
-            await asyncio.sleep(300)
         return AllPics
 
     def GetCards(self):
@@ -70,18 +69,18 @@ class Fun(commands.Cog):
         AllThreeStarCards = []
         AllTwoStarCards = []
 
-        for folder in os.listdir("icons/"):
+        for folder in os.listdir("img/icons/"):
             if folder != '.DS_Store':
-                    for subfolder in os.listdir(f"icons/{folder}"):
+                    for subfolder in os.listdir(f"img/icons/{folder}"):
                         if subfolder == '2':
-                            for file in os.listdir(f"icons/{folder}/{subfolder}"):
-                                AllTwoStarCards.append(f"icons/{folder}/{subfolder}/" + file)
+                            for file in os.listdir(f"img/icons/{folder}/{subfolder}"):
+                                AllTwoStarCards.append(f"img/icons/{folder}/{subfolder}/" + file)
                         elif subfolder == '3':
-                            for file in os.listdir(f"icons/{folder}/{subfolder}"):
-                                AllThreeStarCards.append(f"icons/{folder}/{subfolder}/" + file)
+                            for file in os.listdir(f"img/icons/{folder}/{subfolder}"):
+                                AllThreeStarCards.append(f"img/icons/{folder}/{subfolder}/" + file)
                         elif subfolder == '4':
-                            for file in os.listdir(f"icons/{folder}/{subfolder}"):
-                                AllFourStarCards.append(f"icons/{folder}/{subfolder}/" + file)
+                            for file in os.listdir(f"img/icons/{folder}/{subfolder}"):
+                                AllFourStarCards.append(f"img/icons/{folder}/{subfolder}/" + file)
                         else:
                             pass
 
@@ -206,86 +205,16 @@ class Fun(commands.Cog):
                 api.update(data)
                 json.dump(api, f)
 
-    
     @commands.command(name='updatecards',
                       hidden=True,
                       enabled=True)
-    async def GetIcons(self, ctx):
-        from commands.apiFunctions import GetBestdoriAllCardsAPI, GetBestdoriAllCharactersAPI        
-        from PIL import Image
-        from PIL.ImageDraw import Draw
-        from PIL.ImageFont import truetype
-        from io import BytesIO
-        from os import path
-        CardAPI = await GetBestdoriAllCardsAPI()
-        CharaAPI = await GetBestdoriAllCharactersAPI()
-        for x in CardAPI:
-            try:
-                im = Image.new("RGBA", (180, 180))
-                Folder = str(math.floor(int(x) / 50)).zfill(2)
-                ResourceSetName = CardAPI[x]['resourceSetName']
-                Rarity = str(CardAPI[x]['rarity'])  
-                Attribute = str(CardAPI[x]['attribute'])      
-                CharacterID = str(CardAPI[x]['characterId'])
-                BandID = CharaAPI[CharacterID]['bandId']
-                CharaName = CharaAPI[CharacterID]['characterName'][1]
-                SplitList = CharaName.split(' ', 1)
-                CharaName = SplitList[0].lower()
-                IconsPath = f"icons/full_icons/{x}.png"
-                AllowedTypes = ['limited','permanent','initial','event']
-                if int(Rarity) > 2:
-                    if not path.exists(IconsPath):
-                        if CardAPI[x]['type'] in AllowedTypes:
-                            if CardAPI[x]['type'] == 'others':
-                                    IconURL = f'https://bestdori.com/assets/jp/thumb/chara/card000{Folder}_rip/{ResourceSetName}_after_training.png'    
-                            elif CardAPI[x]['type'] == 'campaign': 
-                                IconURL = f'https://bestdori.com/assets/cn/thumb/chara/card000{Folder}_rip/{ResourceSetName}_normal.png'    
-                            else:
-                                IconURL = f'https://bestdori.com/assets/jp/thumb/chara/card000{Folder}_rip/{ResourceSetName}_normal.png'    
-                            image = requests.get(IconURL)
-                            image = Image.open(BytesIO(image.content))
-                            im.paste(image)
-                            
-                            if Rarity == '1':
-                                rarityPng = "img/2star.png"
-                                starPng = "img/star1.png"
-                            elif Rarity == '2':
-                                rarityPng = "img/2star.png"
-                                starPng = "img/star2.png"
-                            elif Rarity == '3':
-                                rarityPng = "img/3star.png"
-                                starPng = "img/star3.png"
-                            else:
-                                rarityPng = "img/4star.png"
-                                starPng = "img/star4.png"
-                            rarityBg = Image.open(rarityPng)
-                            starBg = Image.open(starPng)
-                            if Rarity == '1':
-                                im.paste(starBg, (5,20), mask=starBg)
-                            else:
-                                im.paste(starBg, (5,50), mask=starBg)
-                            im.paste(rarityBg, mask=rarityBg)
-                        
-                            if Attribute == 'powerful':
-                                attrPng = "img/power2.png"
-                            elif Attribute == 'cool':
-                                attrPng = "img/cool2.png"
-                            elif Attribute == 'pure':
-                                attrPng = "img/pure2.png"
-                            else:
-                                attrPng = "img/happy2.png"
-                            attrBg = Image.open(attrPng)
-                            im.paste(attrBg, (132, 2), mask=attrBg)
-                            
-                            bandPng = f"img/band_{BandID}.png"
-                            bandBg = Image.open(bandPng)
-                            im.paste(bandBg, (1, 2), mask=bandBg)
-
-                            im.save(IconsPath)
-            except:
-                print(f"Failed adding card with ID {x}")
-                pass
-
+    async def GetIcons(self, ctx, gachacards: bool = True):
+        try:
+            await UpdateCardIcons()
+            print('Updated icons successfully')
+        except:
+            print('Failed updating icons')
+            
 
     @commands.command(name='rollstats',
                      aliases=['rs'],
@@ -410,12 +339,12 @@ class Fun(commands.Cog):
                                 else:
                                     Characters.append(x)
                     for chara in Characters:
-                        for x in os.listdir(f"icons/{chara}/2"):
-                            AllTwoStarCards.append(f"icons/{chara}/2/" + x)
-                        for x in os.listdir(f"icons/{chara}/3"):
-                            AllThreeStarCards.append(f"icons/{chara}/3/" + x)
-                        for x in os.listdir(f"icons/{chara}/4"):
-                            AllFourStarCards.append(f"icons/{chara}/4/" + x),
+                        for x in os.listdir(f"img/icons/{chara}/2"):
+                            AllTwoStarCards.append(f"img/icons/{chara}/2/" + x)
+                        for x in os.listdir(f"img/icons/{chara}/3"):
+                            AllThreeStarCards.append(f"img/icons/{chara}/3/" + x)
+                        for x in os.listdir(f"img/icons/{chara}/4"):
+                            AllFourStarCards.append(f"img/icons/{chara}/4/" + x),
                 else:
                     AllTwoStarCards = self.AllTwoStarCards
                     AllThreeStarCards = self.AllThreeStarCards
@@ -484,7 +413,7 @@ class Fun(commands.Cog):
             user = user.name + '#' + user.discriminator
 
             for chara in CardsRolled:
-                search = re.search('/([a-zA-Z]*)\/([0-9]*)', chara)
+                search = re.search('icons/([a-zA-Z]*)\/([0-9]*)', chara)
                 name = search[1]
                 cardtype = search[2]
                 self.UpdateCharaRollsJSON(523337807847227402, 'self', name, cardtype)
@@ -501,7 +430,7 @@ class Fun(commands.Cog):
             import uuid
             from discord import File
             FileName = str(ctx.message.author.id) + '_' + str(uuid.uuid4()) + '.png'
-            SavedFile = "rolls/" + FileName
+            SavedFile = "img/rolls/" + FileName
             new_im.save(SavedFile)
             DiscordFileObject = File(SavedFile,filename=FileName)
             RolledStats = self.GetRollStats(ctx.message.author.id)
@@ -519,6 +448,7 @@ class Fun(commands.Cog):
             embed.set_image(url=f"attachment://{FileName}")
             embed.set_footer(text="Want to see all your stats? Use the rollstats command\nWant to check the leaderboards? Use the rolllb command")
             await ctx.send(file=DiscordFileObject, embed=embed)
+            os.remove(SavedFile)
         except IndexError:
             await ctx.send("Failed generating a roll. This is likely because the bot rolled a card that doesn't exist (e.g. 3* rokka)")
         except Exception as e:
@@ -608,10 +538,10 @@ class Fun(commands.Cog):
                 PicURL = pic['image_urls']['large']
                 if charaId == '23':
                     SaveImage = True
-                    SavedPicPath = f'pfps/{PicID}_p0.jpg'
+                    SavedPicPath = f'img/pfps/{PicID}_p0.jpg'
                 else:
                     SaveImage = False
-                    SavedPicPath = f'imgTmp/{PicID}_p0.jpg'
+                    SavedPicPath = f'img/imgTmp/{PicID}_p0.jpg'
                 response = requests.get(PicURL, 
                                         headers={
                                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36', 
@@ -767,6 +697,101 @@ class Fun(commands.Cog):
             api[str(Server)].pop(User, None)
             with open(FileName, 'w') as f:
                 json.dump(api, f)
+
+
+async def UpdateCardIcons():
+    from commands.apiFunctions import GetBestdoriAllCardsAPI, GetBestdoriAllCharactersAPI        
+    from PIL import Image
+    from PIL.ImageDraw import Draw
+    from PIL.ImageFont import truetype
+    from io import BytesIO
+    from os import path
+    CardAPI = await GetBestdoriAllCardsAPI()
+    CharaAPI = await GetBestdoriAllCharactersAPI()
+    for x in CardAPI:
+        try:
+            print(f'Card {x}')
+            im = Image.new("RGBA", (180, 180))
+            Folder = str(math.floor(int(x) / 50)).zfill(2)
+            ResourceSetName = CardAPI[x]['resourceSetName']
+            Rarity = str(CardAPI[x]['rarity'])  
+            Attribute = str(CardAPI[x]['attribute'])      
+            CharacterID = str(CardAPI[x]['characterId'])
+            BandID = CharaAPI[CharacterID]['bandId']
+            CharaName = CharaAPI[CharacterID]['characterName'][1]
+            SplitList = CharaName.split(' ', 1)
+            CharaName = SplitList[0].lower()
+            Type = CardAPI[x]['type']
+            BaseIconsPath = f"img/icons/base_icons/{x}.png"
+            FullIconsPath  = f"img/icons/full_icons/{x}.png"
+            GachaIconsPath = f"img/icons/{CharaName}/{Rarity}/{x}.png"
+            GachaTypes = ['limited','permanent']
+            # DO THE GACHA ICONS IN THIS LOGIC TOO IF RARITY > 1
+            if not path.exists(FullIconsPath):
+                URLList = []
+                UntrainedCardURL = f'https://bestdori.com/assets/jp/thumb/chara/card000{Folder}_rip/{ResourceSetName}_normal.png' 
+                URLList.append(UntrainedCardURL)
+                if int(Rarity) > 2:
+                    TrainedCardURL = f'https://bestdori.com/assets/jp/thumb/chara/card000{Folder}_rip/{ResourceSetName}_after_training.png'
+                    URLList.append(TrainedCardURL)
+                for url in URLList:
+                    if path.exists(FullIconsPath):
+                        FullIconsPath = f"img/icons/full_icons/{x}_trained.png"
+                        BaseIconsPath = f"img/icons/base_icons/{x}_trained.png"
+                    image = requests.get(url)
+                    try:
+                        image = Image.open(BytesIO(image.content))
+                        im.paste(image)
+                        im.save(BaseIconsPath)
+                        if Rarity == '1':
+                            rarityPng = "img/2star.png"
+                            starPng = "img/star1.png"
+                        elif Rarity == '2':
+                            rarityPng = "img/2star.png"
+                            starPng = "img/star2.png"
+                        elif Rarity == '3':
+                            rarityPng = "img/3star.png"
+                            starPng = "img/star3.png"
+                        else:
+                            rarityPng = "img/4star.png"
+                            starPng = "img/star4.png"
+                        rarityBg = Image.open(rarityPng)
+                        starBg = Image.open(starPng)
+                        if Rarity == '1':
+                            im.paste(starBg, (5,20), mask=starBg)
+                        else:
+                            im.paste(starBg, (5,50), mask=starBg)
+                        im.paste(rarityBg, mask=rarityBg)
+                    
+                        if Attribute == 'powerful':
+                            attrPng = "img/power2.png"
+                        elif Attribute == 'cool':
+                            attrPng = "img/cool2.png"
+                        elif Attribute == 'pure':
+                            attrPng = "img/pure2.png"
+                        else:
+                            attrPng = "img/happy2.png"
+                        attrBg = Image.open(attrPng)
+                        im.paste(attrBg, (132, 2), mask=attrBg)
+                        
+                        bandPng = f"img/band_{BandID}.png"
+                        bandBg = Image.open(bandPng)
+                        im.paste(bandBg, (1, 2), mask=bandBg)
+                        # The last URL in the list will always be the trained card which isn't needed for the gacha cards
+                        if Type in GachaTypes:
+                            if int(Rarity) == 2:
+                                im.save(GachaIconsPath)
+                            elif int(Rarity) > 2:
+                                if url != URLList[-1]:
+                                    im.save(GachaIconsPath)
+                        im.save(FullIconsPath)
+                    except:
+                        print(f"Failed adding card with ID {x}")
+            
+                        pass
+        except:
+            print(f"Failed adding card with ID {x}")
+            pass
 
 def setup(bot):
     bot.add_cog(Fun(bot))
